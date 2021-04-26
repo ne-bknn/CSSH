@@ -1,0 +1,32 @@
+---
+
+version: "3"
+
+services:
+  redis:
+    restart: always
+    user: nobody
+    image: redis
+
+  auth:
+    build:
+    context: ./auth
+
+  bot:
+    build:
+      context: ./bot
+    environment:
+      - BOT_TOKEN=hello
+
+  containerssh:
+    image: containerssh/containerssh
+    ports:
+      - 127.0.0.1:2222:2222
+    volumes:
+      - type: bind
+        source: ./sshd/config.yml
+        target: /etc/containerssh/config.yml
+
+      - type: bind
+        source: ./ssh_host_rsa_key
+        target: /var/secrets/ssh_host_rsa_key
