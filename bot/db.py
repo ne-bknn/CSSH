@@ -10,8 +10,8 @@ class AbstractDB:
     def __init__(self):
         pass
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     async def create(cls, connection: str):
         """Async DB initializer"""
         pass
@@ -58,9 +58,30 @@ class RedisDB(AbstractDB):
         """Async Redis backed initializer"""
         self = RedisDB()
         self.conn = await aioredis.create_redis_pool(connection)
+        return self
 
     async def create_user(self, user_id: int, username: str):
         await self.conn.execute("set", f"user:{user_id}", username)
+        await self.conn.execute("sadd", "telegram_ids", user_id)
+        await self.conn.execute("sadd", "usernames", username)
+
+    async def create_key(self, user_id: int, publickey: str):
+        await self.conn.execute("set", f"keys:{user_id}", publickey)
+
+    async def is_registered(self, user_id: int):
+        return bool(await self.conn.execute("sismember", "telegram_ids", user_id))
+
+    async def contains(self, username: str):
+        return bool(await self.conn.execute("sismember", "usernames", username))
+
+    async def update_key(self, user_id: int, publickey: str):
+        await self.create_key(user_id, publickey)
+
+    async def get_username(self, user_id: int):
+        return await self.conn.execute("get", user_id)
+
+    async def get_publickey(self, user_id: int):
+        return await self.conn.execute("get", f"keys:{user_id}")
 
     async def close(self):
         """Closes connection to redis"""
