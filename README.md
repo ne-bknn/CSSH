@@ -8,7 +8,9 @@ My setup to host a Linux learning environment for lots of people.
 
 ### My solutions
 `key_gen.sh` - silly script (more like a copypasta from https://docs.docker.com/engine/security/protect-access/) to generate keychain and setup docker to use TLS
+
 `auth` - authentication microservice written in Go, public key only
+
 `bot` - telegram bot to actually sign up and get a key.
 
 So, on registration, bot generates keys and sends private one to the user, saving public one in Redis storage. On ssh login ContainerSSH asks auth service to validate the key. Seems like something doable.
