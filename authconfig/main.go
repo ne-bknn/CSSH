@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"io/ioutil"
 	goHttp "net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"strings"
+	"fmt"
+
+	"github.com/go-redis/redis/v8"
 
 	"github.com/containerssh/auth"
 	"github.com/containerssh/configuration"
@@ -19,23 +21,7 @@ import (
 type authHandler struct {
 }
 
-var imageNames []string
-
-type Images struct {
-	arr []string
-}
-
-func loadImageNames() {
-	content, err := ioutil.ReadFile("images.json")
-	if err != nil {
-		panic(err)
-	}
-
-	err = json.Unmarshal([]byte(content), &imageNames)
-	if err != nil {
-		panic(err)
-	}
-}
+var ctx = context.Background()
 
 func (a *authHandler) OnPassword(Username string, Password []byte, RemoteaAddress string, ConnectionID string) (
 	bool,
@@ -44,6 +30,29 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteaAddres
 	if os.Getenv("TESTING") == "1" {
 		return true, nil
 	}
+
+	// should fetch config from envs
+	rdb := redis.NewClient(&redis.Options {
+		Addr: "localhost:6379",
+		Password: "",
+		DB: 0,
+	})
+
+	var rdkey strings.Builder
+	rdkey.WriteString("passwords:")
+	rdkey.WriteString(Username)
+	val, err := rdb.Get(ctx, rdkey.String()).Result()
+
+	if err != nil {
+		// better logging facility should be utilized
+		fmt.Printf("Failed to fetch from redis")
+		return false, nil
+	}
+
+	if val == string(Password) {
+		return true, nil
+	}
+
 	return false, nil
 }
 
@@ -51,29 +60,36 @@ func (a *authHandler) OnPubKey(_ string, _ string, _ string, _ string) (
 	bool,
 	error,
 ) {
+	// Unsupported
 	return false, nil
 }
 
 type configHandler struct {
 }
 
-func stringInSlice(a string, list []string) bool {
-    for _, b := range list {
-        if b == a {
-            return true
-        }
-    }
-    return false
-}
-
 func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configuration.AppConfig, error) {
 	config := configuration.AppConfig{}
 
-	if request.Username == "busybox" {
-		config.Docker.Execution.Launch.ContainerConfig.Image = "busybox"
-		config.DockerRun.Config.ContainerConfig.Image = "busybox"
+	rdb := redis.NewClient(&redis.Options {
+		Addr: "localhost:6379",
+		Password: "",
+		DB: 0,
+	})
+
+	var imagekey strings.Builder
+	imagekey.WriteString("image:")
+	imagekey.WriteString(request.Username)
+
+	imagename, err := rdb.Get(ctx, imagekey.String()).Result()
+	if err != nil {
+		// better logging facility should be utilized
+		fmt.Printf("Failed to fetch imagename from redis!")
+		config.Docker.Execution.Launch.ContainerConfig.Image = "bash"
+		return config, nil
 	}
 
+	config.Docker.Execution.Launch.ContainerConfig.Image = imagename
+	config.DockerRun.Config.ContainerConfig.Image = imagename
 	return config, nil
 }
 
@@ -96,8 +112,6 @@ func (h *handler) ServeHTTP(writer goHttp.ResponseWriter, request *goHttp.Reques
 }
 
 func main() {
-	loadImageNames()
-
 	logger, err := log.NewLogger(log.Config{
 		Level:       log.LevelDebug,
 		Format:      log.FormatLJSON,

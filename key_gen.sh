@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This probably should be a wrapper around cfssl, not openssl. Probably.
+
 set -Eeuo pipefail
 
 setup_colors() {
