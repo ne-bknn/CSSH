@@ -21,8 +21,8 @@ class AbstractDB:
         """Creates telegram_id-username connection"""
 
     @abstractmethod
-    async def create_key(self, user_id: int, publickey: str):
-        """Records a public key for given telegram_id"""
+    async def create_key(self, user_id: int, secret: str):
+        """Records a secret for given telegram_id"""
 
     @abstractmethod
     async def is_registered(self, user_id: int):
@@ -33,8 +33,8 @@ class AbstractDB:
         """Checks whether given username is already taken"""
 
     @abstractmethod
-    async def update_key(self, user_id: int, publickey: str):
-        """Updates a public key for given telegram_id"""
+    async def update_key(self, user_id: int, secret: str):
+        """Updates a secret for given telegram_id"""
 
     @abstractmethod
     async def get_username(self, user_id: int):
@@ -43,6 +43,14 @@ class AbstractDB:
     @abstractmethod
     async def get_publickey(self, user_id: int):
         """Gets publickey by telegram_id"""
+    
+    @abstractmethod
+    async def set_task(self, user_id: int, task_name: str):
+        """Set current task of a user"""
+    
+    @abstractmethod
+    async def get_tasks(self):
+        """Get all task names"""
 
     @abstractmethod
     async def close(self):
@@ -65,7 +73,7 @@ class RedisDB(AbstractDB):
         await self.conn.execute("sadd", "telegram_ids", user_id)
         await self.conn.execute("sadd", "usernames", username)
 
-    async def create_key(self, user_id: int, publickey: str):
+    async def create_key(self, user_id: int, secret: str):
         await self.conn.execute("set", f"keys:{user_id}", publickey)
 
     async def is_registered(self, user_id: int):
@@ -74,7 +82,7 @@ class RedisDB(AbstractDB):
     async def contains(self, username: str):
         return bool(await self.conn.execute("sismember", "usernames", username))
 
-    async def update_key(self, user_id: int, publickey: str):
+    async def update_key(self, user_id: int, secret: str):
         await self.create_key(user_id, publickey)
 
     async def get_username(self, user_id: int):
