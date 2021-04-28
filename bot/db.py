@@ -14,7 +14,7 @@ class AbstractDB:
     @abstractmethod
     async def create(cls, connection: str):
         """Async DB initializer"""
-    
+
     @classmethod
     @abstractmethod
     async def create_tmp(cls, connection: str):
@@ -45,13 +45,13 @@ class AbstractDB:
         """Gets username by telegram_id"""
 
     @abstractmethod
-    async def get_publickey(self, user_id: int):
+    async def get_secret(self, user_id: int):
         """Gets publickey by telegram_id"""
-    
+
     @abstractmethod
     async def set_task(self, user_id: int, task_name: str):
         """Set current task of a user"""
-    
+
     @abstractmethod
     async def get_tasks(self):
         """Get all task names"""
@@ -84,7 +84,7 @@ class RedisDB(AbstractDB):
         await self.conn.execute("sadd", "usernames", username)
 
     async def create_key(self, user_id: int, secret: str):
-        await self.conn.execute("set", f"keys:{user_id}", secret)
+        await self.conn.execute("set", f"secrets:{user_id}", secret)
 
     async def is_registered(self, user_id: int):
         return bool(await self.conn.execute("sismember", "telegram_ids", user_id))
@@ -96,10 +96,19 @@ class RedisDB(AbstractDB):
         await self.create_key(user_id, secret)
 
     async def get_username(self, user_id: int):
-        return await self.conn.execute("get", user_id)
+        return await self.conn.execute("get", f"user:{user_id}")
 
-    async def get_publickey(self, user_id: int):
-        return await self.conn.execute("get", f"keys:{user_id}")
+    async def get_secret(self, user_id: int):
+        return await self.conn.execute("get", f"secrets:{user_id}")
+
+    async def del_image(self, image_name: str):
+        await self.conn.execute("srem", "images_set", image_name)
+
+    async def add_image(self, image_name: str):
+        await self.conn.execute("sadd", "images_set", image_name)
+
+    async def get_images(self):
+        return await self.conn.execute("smembers", "images_set")
 
     async def close(self):
         """Closes connection to redis"""

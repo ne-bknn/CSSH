@@ -27,6 +27,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
 
+
 @dp.message_handler(commands=["start"], state="*")
 async def handler_greeting(message: types.Message, state: FSMContext):
     await state.finish()
@@ -50,9 +51,13 @@ async def handler_registration(message: types.Message, state: FSMContext):
 
     # step four - register user with username, generate password
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pick_username"), state=ui.RegistrationStates.picking_username)
+
+@dp.callback_query_handler(
+    lambda c: c.data and c.data.startswith("pick_username"),
+    state=ui.RegistrationStates.picking_username,
+)
 async def handler_picker(callback_query: types.CallbackQuery, state: FSMContext):
-    logging.info("Entered handler_picker") 
+    logging.info("Entered handler_picker")
     await bot.answer_callback_query(callback_query.id)
 
     if await db.is_registered(callback_query.from_user["id"]):
@@ -61,56 +66,134 @@ async def handler_picker(callback_query: types.CallbackQuery, state: FSMContext)
 
     picked_username = callback_query.data.split(":")[1]
 
-    # race protection, I guess... Just making it a little bit harder to race, but 
-    # exploiting race now requires collaboration between two parties which make 
+    # race protection, I guess... Just making it a little bit harder to race, but
+    # exploiting race now requires collaboration between two parties which make
     # it impactless. I guess.
     if await db.contains(picked_username):
-        await callback_query.answer("Somehow someone has this username, try another one", show_alert=True)
+        await callback_query.answer(
+            "Somehow someone has this username, try another one", show_alert=True
+        )
         return
-    
+
+    # TODO: DRY, markup
     await db.create_user(callback_query.from_user["id"], picked_username)
     key = password_generate(16)
     await db.create_key(callback_query.from_user["id"], key)
-    await callback_query.message.answer(f"Your password is: {key}")
+    await callback_query.message.answer(
+        f"Successfully registered your account! Your password is: {key}"
+    )
     await state.finish()
 
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("enter_username"), state=ui.RegistrationStates.picking_username)
+@dp.callback_query_handler(
+    lambda c: c.data and c.data.startswith("enter_username"),
+    state=ui.RegistrationStates.picking_username,
+)
 async def handler_entering(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     await callback_query.message.answer("Enter your username:")
     await ui.RegistrationStates.entering_username.set()
+
 
 @dp.message_handler(state=ui.RegistrationStates.entering_username)
 async def handler_manual_username_picker(message: types.Message, state: FSMContext):
     username = message.text
     username_regex = "^[A-Za-z0-9_]{4,20}$"
     if not re.match(username_regex, username):
-        await message.answer("Username does not match {username_regex}. Enter valid username")
+        # TODO: markup
+        await message.answer(
+            f"Username does not match {username_regex}. Enter valid username"
+        )
         return
 
     if await db.contains(username):
         await message.answer("This username is already registered. Enter another one")
         return
-    
+
+    # TODO: Dry, markup
     await db.create_user(message.from_user["id"], username)
     key = password_generate(16)
     await db.create_key(message.from_user["id"], key)
-    await message.answer(f"Successfully registered your account! Your password is: {key}")
+    await message.answer(
+        f"Successfully registered your account! Your password is: {key}"
+    )
     await state.finish()
+
+
+@dp.message_handler(commands=["creds"])
+async def handler_creds(message: types.Message, state: FSMContext):
+    username = (await db.get_username(message.from_user["id"])).decode()
+    password = (await db.get_secret(message.from_user["id"])).decode()
+    await message.answer(f"Username: {username}\nPassword: {password}")
+
 
 @dp.callback_query_handler(lambda c: True, state="*")
 async def handler_fallback(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     logging.warning(f"Received unhandled query! Data: {callback_query.data}")
 
+
+@dp.message_handler(commands=["add_image"])
+async def handler_add_image(message: types.Message):
+    if str(message.from_user["id"]) != "523549854":
+        logging.warning(
+            f"An attempt to use admin's commands by {message.from_user['id']}"
+        )
+        return
+
+    l = message.text.split(" ")
+    if len(l) != 2:
+        await message.answer("I do not understand((")
+        return
+
+    imagename = l[1]
+    imagename_regex = "^[A-Za-z0-9_]{4,20}$"
+    if not re.match(imagename_regex, imagename):
+        await message.answer(f"Imagename does not match regex")
+        return
+
+    await db.add_image(imagename)
+    await message.answer("Done")
+
+
+@dp.message_handler(commands=["del_image"])
+async def handler_add_image(message: types.Message):
+    if str(message.from_user["id"]) != "523549854":
+        logging.warning(
+            f"An attempt to use admin's commands by {message.from_user['id']}"
+        )
+        return
+
+    l = message.text.split(" ")
+    if len(l) != 2:
+        await message.answer("I do not understand((")
+        return
+
+    imagename = l[1]
+
+    await db.del_image(imagename)
+    await message.answer("Done")
+
+
+@dp.message_handler(commands=["images"])
+async def handler_get_images(message: types.Message):
+    # TODO: this one should return keyboard
+    images = await db.get_images()
+    if images is None or len(images) == 0:
+        await message.answer("No images yet")
+    else:
+        await message.answer(
+            "Available images:\n- " + "\n- ".join([image.decode() for image in images])
+        )
+
+
 async def setup_db_connection():
     global db
     db = await InterfaceDB.create("redis://localhost/0")
+
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(setup_db_connection())
 
     executor.start_polling(dp, skip_updates=True)
-
