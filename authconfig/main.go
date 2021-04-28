@@ -40,7 +40,7 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 	})
 
 	var rdKey strings.Builder
-	rdKey.WriteString("passwords:")
+	rdKey.WriteString("secrets:")
 	rdKey.WriteString(Username)
 	val, err := rdb.Get(ctx, rdKey.String()).Result()
 
