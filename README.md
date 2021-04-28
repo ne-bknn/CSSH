@@ -13,9 +13,7 @@ My setup to host a Linux learning environment for lots of people.
 
 `bot` - telegram bot to actually sign up and get a key.
 
-So, on registration, bot generates keys and sends private one to the user, saving public one in Redis storage. On ssh login ContainerSSH asks auth service to validate the key. Seems like something doable.
-
 ### Setup overview
 
-1. User registers with telegram bot; gets password, chooses task. Task is stored in redis.
-2. On ssh connect cssh  verifies credentials over redis, fetches current task over redis. Success.
+1. User registers with telegram bot; gets password, chooses task. Taskname is stored in redis.
+2. On ssh connect cssh verifies credentials over redis, fetches current task over redis, spins up the container. Success.
