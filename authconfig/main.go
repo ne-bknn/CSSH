@@ -5,17 +5,17 @@ import (
 	goHttp "net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"strings"
-	"fmt"
+	"syscall"
 
-	"github.com/go-redis/redis/v8"
+	dockerContainer "github.com/docker/docker/api/types/container"
 
 	"github.com/containerssh/auth"
 	"github.com/containerssh/configuration"
 	"github.com/containerssh/http"
 	"github.com/containerssh/log"
 	"github.com/containerssh/service"
+	"github.com/go-redis/redis/v8"
 )
 
 type authHandler struct {
@@ -23,7 +23,7 @@ type authHandler struct {
 
 var ctx = context.Background()
 
-func (a *authHandler) OnPassword(Username string, Password []byte, RemoteaAddress string, ConnectionID string) (
+func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress string, ConnectionID string) (
 	bool,
 	error,
 ) {
@@ -32,20 +32,19 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteaAddres
 	}
 
 	// should fetch config from envs
+
 	rdb := redis.NewClient(&redis.Options {
 		Addr: "localhost:6379",
 		Password: "",
 		DB: 0,
 	})
 
-	var rdkey strings.Builder
-	rdkey.WriteString("passwords:")
-	rdkey.WriteString(Username)
-	val, err := rdb.Get(ctx, rdkey.String()).Result()
+	var rdKey strings.Builder
+	rdKey.WriteString("passwords:")
+	rdKey.WriteString(Username)
+	val, err := rdb.Get(ctx, rdKey.String()).Result()
 
 	if err != nil {
-		// better logging facility should be utilized
-		fmt.Printf("Failed to fetch from redis")
 		return false, nil
 	}
 
@@ -60,7 +59,6 @@ func (a *authHandler) OnPubKey(_ string, _ string, _ string, _ string) (
 	bool,
 	error,
 ) {
-	// Unsupported
 	return false, nil
 }
 
@@ -68,7 +66,11 @@ type configHandler struct {
 }
 
 func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configuration.AppConfig, error) {
+	containerConfig := dockerContainer.Config{}
 	config := configuration.AppConfig{}
+
+	config.Docker.Execution.Launch.ContainerConfig = &containerConfig
+	config.DockerRun.Config.ContainerConfig = &containerConfig
 
 	rdb := redis.NewClient(&redis.Options {
 		Addr: "localhost:6379",
@@ -76,20 +78,19 @@ func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configura
 		DB: 0,
 	})
 
-	var imagekey strings.Builder
-	imagekey.WriteString("image:")
-	imagekey.WriteString(request.Username)
+	var imageKey strings.Builder
+	imageKey.WriteString("images:")
+	imageKey.WriteString(request.Username)
 
-	imagename, err := rdb.Get(ctx, imagekey.String()).Result()
+	imageName, err := rdb.Get(ctx, imageKey.String()).Result()
+
 	if err != nil {
-		// better logging facility should be utilized
-		fmt.Printf("Failed to fetch imagename from redis!")
-		config.Docker.Execution.Launch.ContainerConfig.Image = "bash"
+		containerConfig.Image = "bash"
 		return config, nil
 	}
 
-	config.Docker.Execution.Launch.ContainerConfig.Image = imagename
-	config.DockerRun.Config.ContainerConfig.Image = imagename
+	containerConfig.Image = imageName
+
 	return config, nil
 }
 
@@ -129,7 +130,7 @@ func main() {
 	}
 
 	srv, err := http.NewServer(
-		"authconfig",
+		"authConfig",
 		http.ServerConfiguration{
 			Listen: "0.0.0.0:6823",
 		},
