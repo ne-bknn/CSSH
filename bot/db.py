@@ -108,7 +108,15 @@ class RedisDB(AbstractDB):
         await self.conn.execute("sadd", "images_set", image_name)
 
     async def get_images(self):
-        return await self.conn.execute("smembers", "images_set")
+        images = await self.conn.execute("smembers", "images_set")
+        images = [image.decode() for image in images]
+        return images
+
+    async def contains_image(self, imagename: str):
+        return bool(await self.conn.execute("sismember", "images_set", imagename))
+
+    async def set_image(self, user_id: int, imagename: str):
+        await self.conn.execute("set", f"images:{user_id}", imagename)
 
     async def close(self):
         """Closes connection to redis"""

@@ -55,3 +55,26 @@ async def kb_username_picker(usernames: List[str]) -> InlineKeyboardMarkup:
     )
 
     return keyboard
+
+async def kb_images_picker(page: int) -> Optional[InlineKeyboardMarkup]:
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    db = await InterfaceDB.create_tmp("redis://localhost/0")
+
+    images = await db.get_images()
+    images_to_add = images[page*5:page*5+5]
+
+    if page == 0 and len(images_to_add) == 0:
+        await db.close()
+        return None
+
+    for image in images_to_add:
+        keyboard.add(InlineKeyboardButton(image, callback_data=f"picked_image:{image}"))
+    
+    if not (len(images_to_add) < 5 or len(images[(page+1)*5:(page+1)*5+5]) == 0):
+        keyboard.add(InlineKeyboardButton(">", callback_data=f"next_image_list:{page+1}"))
+
+    if page != 0:
+        keyboard.add(InlineKeyboardButton("<", callback_data=f"next_image_list:{page-1}"))
+    
+    await db.close()
+    return keyboard

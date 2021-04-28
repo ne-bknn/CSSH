@@ -122,15 +122,17 @@ async def handler_manual_username_picker(message: types.Message, state: FSMConte
 
 @dp.message_handler(commands=["creds"])
 async def handler_creds(message: types.Message, state: FSMContext):
-    username = (await db.get_username(message.from_user["id"])).decode()
+    username = await db.get_username(message.from_user["id"])
+
+    if username is None:
+        await message.answer("You have to be registered to view creds! Use /reg")
+        return
+    
+    # TODO: this should be done in db lib
+    username = username.decode()
+
     password = (await db.get_secret(message.from_user["id"])).decode()
     await message.answer(f"Username: {username}\nPassword: {password}")
-
-
-@dp.callback_query_handler(lambda c: True, state="*")
-async def handler_fallback(callback_query: types.CallbackQuery, state: FSMContext):
-    await bot.answer_callback_query(callback_query.id)
-    logging.warning(f"Received unhandled query! Data: {callback_query.data}")
 
 
 @dp.message_handler(commands=["add_image"])
@@ -147,7 +149,7 @@ async def handler_add_image(message: types.Message):
         return
 
     imagename = l[1]
-    imagename_regex = "^[A-Za-z0-9_]{4,20}$"
+    imagename_regex = "^[A-Za-z0-9_]{3,20}$"
     if not re.match(imagename_regex, imagename):
         await message.answer(f"Imagename does not match regex")
         return
@@ -178,19 +180,48 @@ async def handler_add_image(message: types.Message):
 @dp.message_handler(commands=["images"])
 async def handler_get_images(message: types.Message):
     # TODO: this one should return keyboard
-    images = await db.get_images()
-    if images is None or len(images) == 0:
+    if not await db.is_registered(message.from_user["id"]):
+        await message.answer("You have to be registered to view images!")
+        return
+
+    keyboard = await ui.kb_images_picker(0)
+
+
+    if keyboard is None:
         await message.answer("No images yet")
     else:
         await message.answer(
-            "Available images:\n- " + "\n- ".join([image.decode() for image in images])
+            "Available images:", reply_markup=keyboard
         )
 
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("picked_image:"), state="*")
+async def handler_image_picking(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+    imagename = callback_query.data.split(":")[-1]
+    if not await db.contains_image(imagename):
+        logging.warning(f"Someone attempted to switch to nonexistent image. User's id: {callback_query.from_user['id']}")
+        await callback_query.message.answer("This image is unaccessible")
+
+    await set_image(callback_query.from_user["id"], imagename)
+    await callback_query.message.answer(f"Successfully changed your image to {imagename}")
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("next_image_list:"), state="*")
+async def hanlder_image_next(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+    page = int(callback_query.data.split(":")[-1])
+    keyboard = await ui.kb_images_picker(page)
+    await ui.change_keyboard(callback_query, keyboard, bot)
 
 async def setup_db_connection():
     global db
     db = await InterfaceDB.create("redis://localhost/0")
 
+
+
+@dp.callback_query_handler(lambda c: True, state="*")
+async def handler_fallback(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+    logging.warning(f"Received unhandled query! Data: {callback_query.data}")
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
