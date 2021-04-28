@@ -14,7 +14,11 @@ class AbstractDB:
     @abstractmethod
     async def create(cls, connection: str):
         """Async DB initializer"""
-        pass
+    
+    @classmethod
+    @abstractmethod
+    async def create_tmp(cls, connection: str):
+        """Async DB initializer without threadpool (for one-shot connections without access to global connection"""
 
     @abstractmethod
     async def create_user(self, user_id: int, username: str):
@@ -68,13 +72,19 @@ class RedisDB(AbstractDB):
         self.conn = await aioredis.create_redis_pool(connection)
         return self
 
+    @classmethod
+    async def create_tmp(cls, connection: str):
+        self = RedisDB()
+        self.conn = await aioredis.create_connection(connection)
+        return self
+
     async def create_user(self, user_id: int, username: str):
         await self.conn.execute("set", f"user:{user_id}", username)
         await self.conn.execute("sadd", "telegram_ids", user_id)
         await self.conn.execute("sadd", "usernames", username)
 
     async def create_key(self, user_id: int, secret: str):
-        await self.conn.execute("set", f"keys:{user_id}", publickey)
+        await self.conn.execute("set", f"keys:{user_id}", secret)
 
     async def is_registered(self, user_id: int):
         return bool(await self.conn.execute("sismember", "telegram_ids", user_id))
@@ -83,7 +93,7 @@ class RedisDB(AbstractDB):
         return bool(await self.conn.execute("sismember", "usernames", username))
 
     async def update_key(self, user_id: int, secret: str):
-        await self.create_key(user_id, publickey)
+        await self.create_key(user_id, secret)
 
     async def get_username(self, user_id: int):
         return await self.conn.execute("get", user_id)
