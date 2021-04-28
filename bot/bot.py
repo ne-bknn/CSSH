@@ -127,7 +127,7 @@ async def handler_creds(message: types.Message, state: FSMContext):
     if username is None:
         await message.answer("You have to be registered to view creds! Use /reg")
         return
-    
+
     # TODO: this should be done in db lib
     username = username.decode()
 
@@ -186,42 +186,50 @@ async def handler_get_images(message: types.Message):
 
     keyboard = await ui.kb_images_picker(0)
 
-
     if keyboard is None:
         await message.answer("No images yet")
     else:
-        await message.answer(
-            "Available images:", reply_markup=keyboard
-        )
+        await message.answer("Available images:", reply_markup=keyboard)
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("picked_image:"), state="*")
+
+@dp.callback_query_handler(
+    lambda c: c.data and c.data.startswith("picked_image:"), state="*"
+)
 async def handler_image_picking(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     imagename = callback_query.data.split(":")[-1]
     if not await db.contains_image(imagename):
-        logging.warning(f"Someone attempted to switch to nonexistent image. User's id: {callback_query.from_user['id']}")
+        logging.warning(
+            f"Someone attempted to switch to nonexistent image. User's id: {callback_query.from_user['id']}"
+        )
         await callback_query.message.answer("This image is unaccessible")
 
     await set_image(callback_query.from_user["id"], imagename)
-    await callback_query.message.answer(f"Successfully changed your image to {imagename}")
+    await callback_query.message.answer(
+        f"Successfully changed your image to {imagename}"
+    )
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("next_image_list:"), state="*")
+
+@dp.callback_query_handler(
+    lambda c: c.data and c.data.startswith("next_image_list:"), state="*"
+)
 async def hanlder_image_next(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     page = int(callback_query.data.split(":")[-1])
     keyboard = await ui.kb_images_picker(page)
     await ui.change_keyboard(callback_query, keyboard, bot)
 
+
 async def setup_db_connection():
     global db
     db = await InterfaceDB.create("redis://localhost/0")
-
 
 
 @dp.callback_query_handler(lambda c: True, state="*")
 async def handler_fallback(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     logging.warning(f"Received unhandled query! Data: {callback_query.data}")
+
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
