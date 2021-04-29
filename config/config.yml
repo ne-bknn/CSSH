@@ -9,9 +9,9 @@ ssh:
 backend: docker
 
 auth:
-  url: "http://authconfig:8080"
+  url: "http://authconfig:6823"
 configserver:
-  url: "http://authconfig:8080/config"
+  url: "http://authconfig:6823/config"
 docker:
   connection:
     host: unix:///var/run/docker.sock

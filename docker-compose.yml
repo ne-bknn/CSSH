@@ -8,7 +8,7 @@ services:
     user: nobody
     image: redis
 
-  auth:
+  authconfig:
     build:
       context: ./authconfig
     environment:
@@ -28,7 +28,7 @@ services:
   containerssh:
     image: containerssh/containerssh
     ports:
-      - 127.0.0.1:2222:2222
+      - 0.0.0.0:2222:2222
     volumes:
       - type: bind
         source: ./config/config.yml
@@ -45,4 +45,4 @@ services:
     user: root
     depends_on:
       - bot
-      - auth
+      - authconfig

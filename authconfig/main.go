@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"fmt"
 
 	dockerContainer "github.com/docker/docker/api/types/container"
 
@@ -48,12 +49,18 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 	val, err := rdb.Get(ctx, rdKey.String()).Result()
 
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching from redis")
 		return false, nil
 	}
 
+	fmt.Fprintf(os.Stderr, "Password from redis: %s, password from user: %s", val, string(Password))
+
 	if val == string(Password) {
+		fmt.Fprintf(os.Stderr, "Password are identical")
 		return true, nil
 	}
+
+	fmt.Fprintf(os.Stderr, "Password differ")
 
 	return false, nil
 }
