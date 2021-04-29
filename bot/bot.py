@@ -16,8 +16,7 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 
 import ui
 from db import RedisDB as InterfaceDB
-
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+from config import BOT_TOKEN, DB_CONN
 
 logging.basicConfig(level=logging.INFO)
 
@@ -48,8 +47,6 @@ async def handler_registration(message: types.Message, state: FSMContext):
     await ui.RegistrationStates.picking_username.set()
     keyboard = await ui.kb_username_picker(suggested_usernames)
     await message.answer("Lets choose your username", reply_markup=keyboard)
-
-    # step four - register user with username, generate password
 
 
 @dp.callback_query_handler(
@@ -130,7 +127,7 @@ async def handler_creds(message: types.Message, state: FSMContext):
 
     # TODO: this should be done in db lib
     username = username.decode()
-
+    
     password = (await db.get_secret(message.from_user["id"])).decode()
     await message.answer(f"Username: {username}\nPassword: {password}")
 
@@ -159,7 +156,7 @@ async def handler_add_image(message: types.Message):
 
 
 @dp.message_handler(commands=["del_image"])
-async def handler_add_image(message: types.Message):
+async def handler_del_image(message: types.Message):
     if str(message.from_user["id"]) != "523549854":
         logging.warning(
             f"An attempt to use admin's commands by {message.from_user['id']}"
@@ -203,8 +200,9 @@ async def handler_image_picking(callback_query: types.CallbackQuery, state: FSMC
             f"Someone attempted to switch to nonexistent image. User's id: {callback_query.from_user['id']}"
         )
         await callback_query.message.answer("This image is unaccessible")
+        return
 
-    await set_image(callback_query.from_user["id"], imagename)
+    await db.set_image(callback_query.from_user["id"], imagename)
     await callback_query.message.answer(
         f"Successfully changed your image to {imagename}"
     )
@@ -222,7 +220,8 @@ async def hanlder_image_next(callback_query: types.CallbackQuery, state: FSMCont
 
 async def setup_db_connection():
     global db
-    db = await InterfaceDB.create("redis://localhost/0")
+    logging.info(f"DB_CONN: {DB_CONN}")
+    db = await InterfaceDB.create(DB_CONN)
 
 
 @dp.callback_query_handler(lambda c: True, state="*")

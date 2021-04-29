@@ -31,10 +31,13 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 		return true, nil
 	}
 
-	// should fetch config from envs
+	redisAddr := os.Getenv("DB_HOST")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisAddr,
 		Password: "",
 		DB:       0,
 	})
@@ -72,8 +75,13 @@ func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configura
 	config.Docker.Execution.Launch.ContainerConfig = &containerConfig
 	config.DockerRun.Config.ContainerConfig = &containerConfig
 
+	redisAddr := os.Getenv("DB_CONN")
+	if redisAddr == "" {
+		redisAddr = "redis://localhost/0"
+	}
+
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisAddr,
 		Password: "",
 		DB:       0,
 	})
