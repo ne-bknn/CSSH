@@ -9,9 +9,9 @@ My setup to host a Linux learning environment for lots of people.
 ### My solutions
 `key_gen.sh` - silly script (more like a copypasta from https://docs.docker.com/engine/security/protect-access/) to generate keychain and setup docker to use TLS
 
-`authconfig` - authentication microservice written in Go, public key only
+`authconfig` - authentication microservice written in Go
 
-`bot` - telegram bot to actually sign up and get a key.
+`bot` - telegram bot to actually sign up, get a key and choose an image.
 
 ### Setup overview
 
