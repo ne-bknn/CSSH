@@ -5,8 +5,9 @@ version: "3"
 services:
   redis:
     restart: always
-    user: nobody
-    image: redis
+    image: redis:alpine
+    volumes:
+      - .data/redis:/data
 
   authconfig:
     build:
@@ -22,6 +23,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - DB_HOST=redis:6379
+      - ADMIN_ID=${ADMIN_ID}
     depends_on:
       - redis
 

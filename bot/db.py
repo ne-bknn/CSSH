@@ -82,6 +82,7 @@ class RedisDB(AbstractDB):
         await self.conn.execute("set", f"user:{user_id}", username)
         await self.conn.execute("sadd", "telegram_ids", user_id)
         await self.conn.execute("sadd", "usernames", username)
+        await self.conn.execute("set", f"username:{username}", str(user_id))
 
     async def create_key(self, user_id: int, secret: str):
         await self.conn.execute("set", f"secrets:{user_id}", secret)

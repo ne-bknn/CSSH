@@ -17,6 +17,7 @@ import (
 	"github.com/containerssh/log"
 	"github.com/containerssh/service"
 	"github.com/go-redis/redis/v8"
+	golog "log"
 )
 
 type authHandler struct {
@@ -28,6 +29,7 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 	bool,
 	error,
 ) {
+	println("In password handler")
 	if os.Getenv("TESTING") == "1" {
 		return true, nil
 	}
@@ -37,30 +39,50 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 		redisAddr = "localhost:6379"
 	}
 
+	fmt.Printf("redisAddr: %s\n", redisAddr)
+
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: "",
 		DB:       0,
 	})
 
-	var rdKey strings.Builder
-	rdKey.WriteString("secrets:")
-	rdKey.WriteString(Username)
-	val, err := rdb.Get(ctx, rdKey.String()).Result()
+	var idKey strings.Builder
+	idKey.WriteString("username:")
+	idKey.WriteString(Username)
+
+	golog.Printf("Searching for %s in redis\n", idKey.String())
+
+	id, err := rdb.Get(ctx, idKey.String()).Result()
+	golog.Printf("ID from DB: %s", id)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error fetching from redis")
+		golog.Print("Error getting ID from redis")
 		return false, nil
 	}
 
-	fmt.Fprintf(os.Stderr, "Password from redis: %s, password from user: %s", val, string(Password))
+	var rdKey strings.Builder
+	rdKey.WriteString("secrets:")
+	rdKey.WriteString(id)
+	golog.Printf("Searching for: %s", rdKey.String())
+	val, err := rdb.Get(ctx, rdKey.String()).Result()
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching from redis\n")
+		golog.Print(err)
+		golog.Printf("Fetched from redis: %s\n", val)
+		return false, nil
+	}
+
+	fmt.Fprintf(os.Stderr, "Password from redis: %s, password from user: %s\n", val, string(Password))
 
 	if val == string(Password) {
-		fmt.Fprintf(os.Stderr, "Password are identical")
+		fmt.Fprintf(os.Stderr, "Password are identical\n")
+		println("Passwords are identical\n")
 		return true, nil
 	}
 
-	fmt.Fprintf(os.Stderr, "Password differ")
+	fmt.Fprintf(os.Stderr, "Password differ\n")
 
 	return false, nil
 }
@@ -69,6 +91,8 @@ func (a *authHandler) OnPubKey(_ string, _ string, _ string, _ string) (
 	bool,
 	error,
 ) {
+	fmt.Printf("In pubkey handler")
+	println("In println pubkey handler")
 	return false, nil
 }
 

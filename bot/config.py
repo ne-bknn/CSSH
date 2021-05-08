@@ -6,4 +6,8 @@ if BOT_TOKEN is None:
 
 DB_HOST = os.getenv("DB_HOST", "localhost:6379")
 
+ADMIN_ID = os.getenv("ADMIN_ID")
+if ADMIN_ID is None:
+    raise Exception("No ADMIN_ID provided")
+
 DB_CONN = f"redis://{DB_HOST}/0"

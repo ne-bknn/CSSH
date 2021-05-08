@@ -16,7 +16,7 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 
 import ui
 from db import RedisDB as InterfaceDB
-from config import BOT_TOKEN, DB_CONN
+from config import BOT_TOKEN, DB_CONN, ADMIN_ID
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,7 +72,7 @@ async def handler_picker(callback_query: types.CallbackQuery, state: FSMContext)
         )
         return
 
-    # TODO: DRY, markup
+    #TODO: DRY, markup
     await db.create_user(callback_query.from_user["id"], picked_username)
     key = password_generate(16)
     await db.create_key(callback_query.from_user["id"], key)
@@ -134,7 +134,8 @@ async def handler_creds(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=["add_image"])
 async def handler_add_image(message: types.Message):
-    if str(message.from_user["id"]) != "523549854":
+    # should abstract this part as a something like decorator flask-style
+    if str(message.from_user["id"]) != ADMIN_ID:
         logging.warning(
             f"An attempt to use admin's commands by {message.from_user['id']}"
         )
@@ -157,7 +158,7 @@ async def handler_add_image(message: types.Message):
 
 @dp.message_handler(commands=["del_image"])
 async def handler_del_image(message: types.Message):
-    if str(message.from_user["id"]) != "523549854":
+    if str(message.from_user["id"]) != ADMIN_ID:
         logging.warning(
             f"An attempt to use admin's commands by {message.from_user['id']}"
         )
