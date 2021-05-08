@@ -74,8 +74,6 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 		return false, nil
 	}
 
-	fmt.Fprintf(os.Stderr, "Password from redis: %s, password from user: %s\n", val, string(Password))
-
 	if val == string(Password) {
 		fmt.Fprintf(os.Stderr, "Password are identical\n")
 		println("Passwords are identical\n")
