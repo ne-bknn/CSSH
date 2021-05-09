@@ -72,7 +72,7 @@ async def handler_picker(callback_query: types.CallbackQuery, state: FSMContext)
         )
         return
 
-    #TODO: DRY, markup
+    # TODO: DRY, markup
     await db.create_user(callback_query.from_user["id"], picked_username)
     key = password_generate(16)
     await db.create_key(callback_query.from_user["id"], key)
@@ -127,7 +127,7 @@ async def handler_creds(message: types.Message, state: FSMContext):
 
     # TODO: this should be done in db lib
     username = username.decode()
-    
+
     password = (await db.get_secret(message.from_user["id"])).decode()
     await message.answer(f"Username: {username}\nPassword: {password}")
 
