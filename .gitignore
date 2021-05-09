@@ -146,3 +146,4 @@ dmypy.json
 
 .secrets/
 tags
+.data/
