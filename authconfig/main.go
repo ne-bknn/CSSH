@@ -137,10 +137,6 @@ func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configura
 
 	containerConfig.Image = imageName
 
-	if err != nil {
-		golog.Print("Config validation failed")
-		golog.Print(err)
-	}
 	golog.Printf("config.Docker.Execution.Launch.ContainerConfig.Image: %s\n", config.Docker.Execution.Launch.ContainerConfig.Image)
 	return config, nil
 }
