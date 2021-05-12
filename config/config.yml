@@ -1,6 +1,6 @@
 ---
 log:
-  level: info
+  level: debug
 
 ssh:
   hostkeys:
@@ -17,7 +17,6 @@ docker:
     host: unix:///var/run/docker.sock
   execution:
     imagePullPolicy: Never
-
     host:
       resources:
         cpuperiod: 10000

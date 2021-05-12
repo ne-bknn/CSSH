@@ -147,7 +147,7 @@ async def handler_add_image(message: types.Message):
         return
 
     imagename = l[1]
-    imagename_regex = "^[A-Za-z0-9_]{3,20}$"
+    imagename_regex = "^[A-Za-z0-9_:]{3,20}$"
     if not re.match(imagename_regex, imagename):
         await message.answer(f"Imagename does not match regex")
         return
@@ -195,7 +195,7 @@ async def handler_get_images(message: types.Message):
 )
 async def handler_image_picking(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
-    imagename = callback_query.data.split(":")[-1]
+    imagename = callback_query.data.replace("picked_image:", "", 1)
     if not await db.contains_image(imagename):
         logging.warning(
             f"Someone attempted to switch to nonexistent image. User's id: {callback_query.from_user['id']}"

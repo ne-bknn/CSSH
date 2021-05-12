@@ -93,12 +93,13 @@ func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configura
 	containerConfig := dockerContainer.Config{}
 	config := configuration.AppConfig{}
 
+	config.Backend = "docker"
+	config.Docker.Connection.Host = "unix:///var/run/docker.sock"
 	config.Docker.Execution.Launch.ContainerConfig = &containerConfig
-	config.DockerRun.Config.ContainerConfig = &containerConfig
 
-	redisAddr := os.Getenv("DB_CONN")
+	redisAddr := os.Getenv("DB_HOST")
 	if redisAddr == "" {
-		redisAddr = "redis://localhost/0"
+		redisAddr = "localhost:6379"
 	}
 
 	rdb := redis.NewClient(&redis.Options{
@@ -107,19 +108,40 @@ func (c *configHandler) OnConfig(request configuration.ConfigRequest) (configura
 		DB:       0,
 	})
 
+	var idKey strings.Builder
+	var Username = request.Username
+	idKey.WriteString("username:")
+	idKey.WriteString(Username)
+
+	id, err := rdb.Get(ctx, idKey.String()).Result()
+
+	if err == redis.Nil {
+		golog.Printf("OnConfig: User %s does not exist\n", Username)
+	} else if err != nil {
+		golog.Printf("OnConfig: Error getting ID from redis for user %s\n", Username)
+		return config, nil
+	}
+
 	var imageKey strings.Builder
 	imageKey.WriteString("images:")
-	imageKey.WriteString(request.Username)
+	imageKey.WriteString(id)
 
 	imageName, err := rdb.Get(ctx, imageKey.String()).Result()
 
 	if err != nil {
+		golog.Printf("Error fetching config from redis, defaulting to bash")
 		containerConfig.Image = "bash"
+		golog.Printf("config.Docker.Execution.Launch.ContainerConfig.Image: %s\n", config.Docker.Execution.Launch.ContainerConfig.Image)
 		return config, nil
 	}
 
 	containerConfig.Image = imageName
 
+	if err != nil {
+		golog.Print("Config validation failed")
+		golog.Print(err)
+	}
+	golog.Printf("config.Docker.Execution.Launch.ContainerConfig.Image: %s\n", config.Docker.Execution.Launch.ContainerConfig.Image)
 	return config, nil
 }
 
