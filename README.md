@@ -15,23 +15,21 @@ but had lots of problems, like a lot of time to deploy
 a single image, definitely some security issuess, no process management in containers...
 You name it. And all of that using bash scripts. Definitely not worth publishing.
 
-Unfortunately, ContainerSSH has not-so-great docs, no sane default configuration and the examples are broken. Here comes this repo.
+Unfortunately, ContainerSSH is not production-ready yet and does not have a sane default configuration. Here comes this repo. 
 ## Deployment
 
-To run on a single host should add your bot's token to .env file for docker-compose to use, like that:
-
+Enviromental variables to set. You should add them to `.env` file in the eoot of the project. 
 ```bash
 BOT_TOKEN=HELLO_THIS_IS_TOKEN
+ADMIN_ID=YOUR_NUMERIC_TELEGRAM_ID
 ```
-
-And fix admin's ID in bot's source code (will be fixed soon).
 
 Compose will source `.env` file before startup. Then just
 
 ```bash
   sudo docker-compose up -d
 ```
-To actually run it (or without sudo if current user is in `docker` group)
+To actually run it (or without sudo if current user is in `docker` group) 
 
   
 ## Usage
