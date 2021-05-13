@@ -18,7 +18,7 @@ You name it. And all of that using bash scripts. Definitely not worth publishing
 Unfortunately, ContainerSSH is not production-ready yet and does not have a sane default configuration. Here comes this repo. 
 ## Deployment
 
-Enviromental variables to set. You should add them to `.env` file in the eoot of the project. 
+Enviromental variables to set. You should add them to `.env` file at the root of the project. 
 ```bash
 BOT_TOKEN=HELLO_THIS_IS_TOKEN
 ADMIN_ID=YOUR_NUMERIC_TELEGRAM_ID
