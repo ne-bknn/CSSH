@@ -11,7 +11,7 @@ import (
 	dockerContainer "github.com/docker/docker/api/types/container"
 
 	"github.com/containerssh/auth"
-	"github.com/containerssh/configuration"
+	"github.com/containerssh/configuration/v2"
 	"github.com/containerssh/http"
 	"github.com/containerssh/log"
 	"github.com/containerssh/service"
