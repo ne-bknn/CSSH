@@ -34,6 +34,8 @@ To actually run it (or without sudo if current user is in `docker` group)
   
 ## Usage
 
+MVP is here! Use template/Dockerfile.dummy[1-2] to test it!
+
 `docker-compose` will deploy containerssh ssh service 
 alongside with Telegram bot. 
 
@@ -56,20 +58,20 @@ Admin additionally can:
   
 ## Roadmap
 
-- MVP is near but not ready, yikes.
-
 - Easy-to-deploy public key authentication for docker socket, not an abysmal 100-something lines of bash copypasta. [CFSSL](https://github.com/cloudflare/cfssl), maybe?
 
-- Improvements of bot's UI.
+- Bot's UI improvement: fix obvious bugs and typos, add text menu for image picking (easier for lots of images)
 
-- I still have no idea how to properly test Telegram bots. Maybe you can help?
+- Tests for bot
 
-- Less hardcoded values, configuration template.
+- Dockerfile template for image to deploy by containerssh (phusion+containerssh\_agent+checker template)
 
-- Dockerfile template for image to deploy by containerssh (WIP).
+- Sane, secure default config
 
+- Bind mounting user's directory as /home/student to preserve between launches
 
-  
+- Build and push images using Github Actions to speed up deployment
+
 ## Features
 
 - Small disk footprint (distroless as base images for services)
