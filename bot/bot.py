@@ -31,7 +31,7 @@ dp.middleware.setup(LoggingMiddleware())
 async def handler_greeting(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer(
-        "I'm an authorization bot. Use /reg to register and get your credentials and /tasks get task list."
+        "I'm an authorization bot. Use /reg to register and get your credentials and /images get task list."
     )
 
 
@@ -49,6 +49,8 @@ async def handler_registration(message: types.Message, state: FSMContext):
     await message.answer("Lets choose your username", reply_markup=keyboard)
 
 
+# TODO: rewrite callbacks using aiogram.utils.callback_data.CallbackData
+# see https://github.com/aiogram/aiogram/blob/dev-2.x/examples/callback_data_factory_simple.py
 @dp.callback_query_handler(
     lambda c: c.data and c.data.startswith("pick_username"),
     state=ui.RegistrationStates.picking_username,
@@ -175,7 +177,7 @@ async def handler_del_image(message: types.Message):
     await message.answer("Done")
 
 
-@dp.message_handler(commands=["images"])
+@dp.message_handler(commands=["images", "tasks"])
 async def handler_get_images(message: types.Message):
     # TODO: this one should return keyboard
     if not await db.is_registered(message.from_user["id"]):

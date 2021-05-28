@@ -22,16 +22,11 @@ import (
 type authHandler struct {
 }
 
-var ctx = context.Background()
+type DB struct {
+	conn *redis.Client
+}
 
-func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress string, ConnectionID string) (
-	bool,
-	error,
-) {
-	if os.Getenv("TESTING") == "1" {
-		return true, nil
-	}
-
+func (d *DB) init() {
 	redisAddr := os.Getenv("DB_HOST")
 	if redisAddr == "" {
 		redisAddr = "localhost:6379"
@@ -43,27 +38,54 @@ func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress
 		DB:       0,
 	})
 
+	d.conn = rdb
+}
+
+func (d *DB) get_id(Username string) (string, error) {
 	var idKey strings.Builder
 	idKey.WriteString("username:")
 	idKey.WriteString(Username)
 
-	id, err := rdb.Get(ctx, idKey.String()).Result()
+	id, err := d.conn.Get(ctx, idKey.String()).Result()
+
+	return id, err
+}
+
+func (d *DB) get_password(Id string) (string, error) {
+	var rdKey strings.Builder
+	rdKey.WriteString("secrets:")
+	rdKey.WriteString(Id)
+
+	val, err := d.conn.Get(ctx, rdKey.String()).Result()
+
+	return val, err
+}
+
+
+var ctx = context.Background()
+
+func (a *authHandler) OnPassword(Username string, Password []byte, RemoteAddress string, ConnectionID string) (
+	bool,
+	error,
+) {
+	rdb := DB{}
+	rdb.init()
+
+	id, err := rdb.get_id(Username)
 
 	if err == redis.Nil {
 		golog.Printf("User %s does not exist\n", Username)
+		return false, nil
 	} else if err != nil {
 		golog.Printf("Error getting ID from redis for user %s\n", Username)
 		return false, nil
 	}
 
-	var rdKey strings.Builder
-	rdKey.WriteString("secrets:")
-	rdKey.WriteString(id)
-
-	val, err := rdb.Get(ctx, rdKey.String()).Result()
+	val, err := rdb.get_password(id)
 
 	if err == redis.Nil {
 		golog.Printf("User %s does not have a password, that should not happen", id)
+		return false, nil
 	} else if err != nil {
 		golog.Printf("Error fetching from redis: %s\n", err)
 		return false, nil

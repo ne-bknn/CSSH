@@ -1,0 +1,67 @@
+---
+
+# testing compose file - all intra ports are exposed
+
+version: "3"
+
+services:
+  redis:
+    restart: always
+    ports:
+      - 6379:6379
+    image: redis:alpine
+    volumes:
+      - .data/redis:/data
+
+  authconfig:
+    ports:
+      - 6823:6823
+    build:
+      context: ./authconfig
+    environment:
+      - DB_HOST=redis:6379
+    depends_on:
+      - redis
+
+  bot:
+    build:
+      context: ./bot
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DB_HOST=redis:6379
+      - ADMIN_ID=${ADMIN_ID}
+    depends_on:
+      - redis
+
+  containerssh:
+    image: containerssh/containerssh:0.4.1
+    ports:
+      - 0.0.0.0:2222:2222
+    volumes:
+      - type: bind
+        source: ./config/config.yml
+        target: /etc/containerssh/config.yaml
+
+      - type: bind
+        source: .secrets/ssh_host_rsa_key
+        target: /var/secrets/ssh_host_rsa_key
+
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+    user: root
+    depends_on:
+      - bot
+      - authconfig
+
+  tests:
+    build:
+      context: .
+      dockerfile: ./tests/Dockerfile
+    depends_on:
+      - containerssh
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DB_HOST=redis:6379
+      - ADMIN_ID=${ADMIN_ID}
