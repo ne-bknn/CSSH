@@ -10,13 +10,14 @@ import (
 
 	dockerContainer "github.com/docker/docker/api/types/container"
 
+	golog "log"
+
 	"github.com/containerssh/auth"
 	"github.com/containerssh/configuration/v2"
 	"github.com/containerssh/http"
 	"github.com/containerssh/log"
 	"github.com/containerssh/service"
 	"github.com/go-redis/redis/v8"
-	golog "log"
 )
 
 type authHandler struct {
@@ -60,7 +61,6 @@ func (d *DB) get_password(Id string) (string, error) {
 
 	return val, err
 }
-
 
 var ctx = context.Background()
 

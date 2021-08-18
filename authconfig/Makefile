@@ -1,5 +1,5 @@
 .PHONY: build
-build: fmt
+build:
 	go build -o authc main.go
 
 .PHONY: clean

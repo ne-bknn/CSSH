@@ -20,7 +20,7 @@ from config import BOT_TOKEN, DB_CONN, ADMIN_ID
 
 logging.basicConfig(level=logging.INFO)
 
-db: InterfaceDB = None
+db: Optional[InterfaceDB] = None
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())

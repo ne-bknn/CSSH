@@ -4,23 +4,23 @@ FROM containerssh/agent AS agent
 # https://github.com/phusion/baseimage-docker/
 FROM phusion/baseimage:bionic-1.0.0
 
-RUN install_clean nano vim psutil
+USER root
 
-RUN set -Eeuo pipefail
-CMD ["/sbin/my_init"]
+RUN install_clean nano vim python3-psutil
+
+RUN set -eu pipefail
 
 COPY --from=agent /usr/bin/containerssh-agent /usr/bin/containerssh-agent
-RUN mkdir /etc/service/agent
-COPY cssh_agent.sh /etc/service/agent/run
-RUN chmod +x /etc/service/agent/run
 
 # checker_service should start /utils/checker
 RUN mkdir /etc/service/checker
-COPY checker_service.sh /etc/service/checker/run
+COPY checker_service.py /etc/service/checker/run
 RUN chmod +x /etc/service/checker/run
 
 RUN useradd -m student
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /home/student
-USER student
+# USER student
+
+ENTRYPOINT ["containerssh-agent", "console", "--env", "TERM=xterm-256color", "--", "/sbin/my_init", "--", "bash", "-l"]
